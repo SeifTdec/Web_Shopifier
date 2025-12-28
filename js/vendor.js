@@ -45,30 +45,32 @@ const utils = {
 
 const authManager = {
     checkAuth: async () => {
-        // For demo purposes, auto-login with vendor 1
         try {
-            const response = await fetch(`${API_BASE_URL}/vendor/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                credentials: 'include',
-                body: JSON.stringify({
-                    email: 'electronics@tvendor.com',
-                    password: '147258369@#W'
-                })
+            const response = await fetch(`${API_BASE_URL}/auth/status`, {
+                credentials: 'include'
             });
+            const data = await response.json();
             
-            if (response.ok) {
-                const data = await response.json();
+            if (data.authenticated && data.type === 'vendor') {
                 currentVendor.id = data.vendor.id;
-                currentVendor.name = data.vendor.business_name;
-                currentVendor.email = data.vendor.email;
+                currentVendor.name = data.vendor.name;
+                currentVendor.email = data.vendor.email || '';
                 utils.updateVendorInfo();
                 return true;
+            } else if (data.authenticated && data.type === 'user') {
+                // User logged in, redirect to customer store
+                window.location.href = 'index.html';
+                return false;
+            } else {
+                // Not authenticated, redirect to login
+                window.location.href = 'login.html';
+                return false;
             }
         } catch (err) {
             console.error('Auth error:', err);
+            window.location.href = 'login.html';
+            return false;
         }
-        return false;
     },
     
     logout: async () => {
@@ -77,7 +79,7 @@ const authManager = {
                 method: 'POST',
                 credentials: 'include'
             });
-            window.location.href = 'index.html';
+            window.location.href = 'login.html';
         } catch (err) {
             console.error('Logout error:', err);
         }
@@ -472,7 +474,6 @@ async function init() {
     const isAuthenticated = await authManager.checkAuth();
     
     if (!isAuthenticated) {
-        window.location.href = 'index.html';
         return;
     }
     

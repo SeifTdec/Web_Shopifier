@@ -288,7 +288,22 @@ const cartManager = {
     },
     
     checkout: async function() {
+        // Check if user is logged in
         try {
+            const authResponse = await fetch(`${API_BASE_URL}/auth/status`, {
+                credentials: 'include'
+            });
+            const authData = await authResponse.json();
+            
+            if (!authData.authenticated || authData.type !== 'user') {
+                // Not logged in, redirect to login
+                if (confirm('You need to login to place an order. Would you like to login now?')) {
+                    window.location.href = 'login.html';
+                }
+                return;
+            }
+            
+            // User is logged in, proceed with checkout
             const response = await fetch(`${API_BASE_URL}/orders`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -409,7 +424,56 @@ function initEventListeners() {
     });
 }
 
+// Check authentication status
+async function checkAuth() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/auth/status`, {
+            credentials: 'include'
+        });
+        const data = await response.json();
+        
+        if (data.authenticated && data.type === 'user') {
+            // User is logged in
+            updateUIForLoggedInUser(data.user);
+        } else if (data.authenticated && data.type === 'vendor') {
+            // Vendor logged in, redirect to vendor page
+            window.location.href = 'vendor.html';
+            return;
+        }
+        // Guest users can continue
+    } catch (err) {
+        console.error('Auth check error:', err);
+    }
+}
+
+function updateUIForLoggedInUser(user) {
+    // Add user info to header
+    const cartBtn = document.getElementById('cartBtn');
+    const userInfo = document.createElement('div');
+    userInfo.style.cssText = 'color:white;margin-right:1rem;font-size:0.9rem;';
+    userInfo.innerHTML = `Welcome, ${user.name}! | <a href="#" id="logoutLink" style="color:#d4c5a0;text-decoration:none;">Logout</a>`;
+    cartBtn.parentNode.insertBefore(userInfo, cartBtn);
+    
+    document.getElementById('logoutLink').addEventListener('click', async (e) => {
+        e.preventDefault();
+        await logout();
+    });
+}
+
+async function logout() {
+    try {
+        await fetch(`${API_BASE_URL}/auth/logout`, {
+            method: 'POST',
+            credentials: 'include'
+        });
+        window.location.href = 'login.html';
+    } catch (err) {
+        console.error('Logout error:', err);
+    }
+}
+
 async function init() {
+    await checkAuth();
     await productManager.fetchProducts();
     await utils.loadCart();
     cartManager.updateCartCount();
