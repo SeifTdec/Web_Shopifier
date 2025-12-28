@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+    <head>
+        <meta charset="UTF-8"/>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+        <title>Login - Shopifier</title>
+        <link rel="stylesheet" href="login.css"/>
+    </head>
+    <body>
+        <div class="container">
+            <div class="login-box">
+                <div class="logo">Shopifier</div>
+                <div class="tagline">Your One-Stop Shopping Destination</div>
+                
+                <!-- Tab Navigation -->
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="customer-login">Customer Login</button>
+                    <button class="tab-btn" data-tab="vendor-login">Vendor Login</button>
+                    <button class="tab-btn" data-tab="register">Register</button>
+                </div>
+
+                <!-- Customer Login Form -->
+                <div class="tab-content active" id="customer-login">
+                    <h2>Customer Login</h2>
+                    <form id="customerLoginForm">
+                        <div class="form-group">
+                            <label for="customerEmail">Email</label>
+                            <input type="email" id="customerEmail" required placeholder="Enter your email">
+                        </div>
+                        <div class="form-group">
+                            <label for="customerPassword">Password</label>
+                            <input type="password" id="customerPassword" required placeholder="Enter your password">
+                        </div>
+                        <button type="submit" class="btn-primary">Login</button>
+                    </form>
+                    <div class="form-footer">
+                        Don't have an account? <a href="#" class="link" data-switch="register">Register here</a>
+                    </div>
+                    <div class="or-divider">
+                        <span>OR</span>
+                    </div>
+                    <button type="button" class="btn-secondary" id="continueAsGuestBtn">Continue as Guest</button>
+                </div>
+
+                <!-- Vendor Login Form -->
+                <div class="tab-content" id="vendor-login">
+                    <h2>Vendor Login</h2>
+                    <form id="vendorLoginForm">
+                        <div class="form-group">
+                            <label for="vendorEmail">Business Email</label>
+                            <input type="email" id="vendorEmail" required placeholder="vendor@business.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="vendorPassword">Password</label>
+                            <input type="password" id="vendorPassword" required placeholder="Enter your password">
+                        </div>
+                        <button type="submit" class="btn-primary">Login to Dashboard</button>
+                    </form>
+                    <div class="demo-credentials">
+                        <strong>Demo Credentials:</strong><br>
+                        <small>
+                            T-Electronics: electronics@tvendor.com<br>
+                            T-Clothes: clothes@tvendor.com<br>
+                            T-Mart: mart@tvendor.com<br>
+                            Password: 147258369@#W
+                        </small>
+                    </div>
+                </div>
+
+                <!-- Register Form -->
+                <div class="tab-content" id="register">
+                    <h2>Create Account</h2>
+                    <form id="registerForm">
+                        <div class="form-group">
+                            <label for="registerName">Full Name</label>
+                            <input type="text" id="registerName" required placeholder="John Doe">
+                        </div>
+                        <div class="form-group">
+                            <label for="registerEmail">Email</label>
+                            <input type="email" id="registerEmail" required placeholder="john@example.com">
+                        </div>
+                        <div class="form-group">
+                            <label for="registerPassword">Password</label>
+                            <input type="password" id="registerPassword" required placeholder="Min 6 characters" minlength="6">
+                        </div>
+                        <div class="form-group">
+                            <label for="registerConfirmPassword">Confirm Password</label>
+                            <input type="password" id="registerConfirmPassword" required placeholder="Re-enter password" minlength="6">
+                        </div>
+                        <button type="submit" class="btn-primary">Create Account</button>
+                    </form>
+                    <div class="form-footer">
+                        Already have an account? <a href="#" class="link" data-switch="customer-login">Login here</a>
+                    </div>
+                </div>
+
+                <!-- Alert/Notification Area -->
+                <div class="alert" id="alertBox"></div>
+            </div>
+        </div>
+
+        <footer class="footer">
+            <div class="footer-content">
+                <div class="footer-support">
+                    Support: shopifierfastcall@gmail.com
+                </div>
+                <div class="footer-copyright">
+                    © 2001 Shopifier. All rights reserved.
+                </div>
+            </div>
+        </footer>
+
+        <script src="login.js"></script>
+    </body>
+</html>

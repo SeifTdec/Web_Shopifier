@@ -4,10 +4,11 @@ import sqlite3
 import hashlib
 from datetime import datetime
 import os
+from functools import wraps
 
 app = Flask(__name__)
 app.secret_key = 'your-secret-key-change-this-in-production'
-CORS(app, supports_credentials=True)
+CORS(app, supports_credentials=True, origins=['http://localhost:8000'])
 
 DATABASE = 'shopifier.db'
 
@@ -26,6 +27,47 @@ def init_db():
     conn.commit()
     conn.close()
     print("Database initialized successfully!")
+
+# Authentication decorators
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return jsonify({'error': 'Authentication required'}), 401
+        return f(*args, **kwargs)
+    return decorated_function
+
+def vendor_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'vendor_id' not in session:
+            return jsonify({'error': 'Vendor authentication required'}), 401
+        return f(*args, **kwargs)
+    return decorated_function
+
+# Check authentication status
+@app.route('/api/auth/status', methods=['GET'])
+def check_auth_status():
+    if 'user_id' in session:
+        return jsonify({
+            'authenticated': True,
+            'type': 'user',
+            'user': {
+                'id': session['user_id'],
+                'name': session.get('user_name', '')
+            }
+        }), 200
+    elif 'vendor_id' in session:
+        return jsonify({
+            'authenticated': True,
+            'type': 'vendor',
+            'vendor': {
+                'id': session['vendor_id'],
+                'name': session.get('vendor_name', '')
+            }
+        }), 200
+    else:
+        return jsonify({'authenticated': False}), 200
 
 # User Authentication Routes
 @app.route('/api/auth/register', methods=['POST'])
@@ -70,6 +112,7 @@ def login_user():
     if user:
         session['user_id'] = user['id']
         session['user_name'] = user['name']
+        session['user_email'] = user['email']
         return jsonify({
             'message': 'Login successful',
             'user': {'id': user['id'], 'name': user['name'], 'email': user['email']}
@@ -94,6 +137,7 @@ def login_vendor():
     if vendor:
         session['vendor_id'] = vendor['id']
         session['vendor_name'] = vendor['business_name']
+        session['vendor_email'] = vendor['email']
         return jsonify({
             'message': 'Login successful',
             'vendor': {
@@ -110,7 +154,7 @@ def logout():
     session.clear()
     return jsonify({'message': 'Logged out successfully'}), 200
 
-# Product Routes
+# Product Routes (Public - no auth required)
 @app.route('/api/products', methods=['GET'])
 def get_products():
     category = request.args.get('category', 'all')
@@ -156,12 +200,11 @@ def get_product(product_id):
     else:
         return jsonify({'error': 'Product not found'}), 404
 
-# Vendor Product Management Routes
+# Vendor Product Management Routes (Auth required)
 @app.route('/api/vendor/products', methods=['GET'])
+@vendor_required
 def get_vendor_products():
-    vendor_id = session.get('vendor_id')
-    if not vendor_id:
-        return jsonify({'error': 'Unauthorized'}), 401
+    vendor_id = session['vendor_id']
     
     conn = get_db()
     products = conn.execute(
@@ -173,12 +216,10 @@ def get_vendor_products():
     return jsonify([dict(p) for p in products]), 200
 
 @app.route('/api/vendor/products', methods=['POST'])
+@vendor_required
 def add_product():
-    vendor_id = session.get('vendor_id')
-    vendor_name = session.get('vendor_name')
-    
-    if not vendor_id:
-        return jsonify({'error': 'Unauthorized'}), 401
+    vendor_id = session['vendor_id']
+    vendor_name = session['vendor_name']
     
     data = request.json
     
@@ -200,11 +241,9 @@ def add_product():
         return jsonify({'error': str(e)}), 400
 
 @app.route('/api/vendor/products/<int:product_id>', methods=['PUT'])
+@vendor_required
 def update_product(product_id):
-    vendor_id = session.get('vendor_id')
-    if not vendor_id:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
+    vendor_id = session['vendor_id']
     data = request.json
     
     conn = get_db()
@@ -232,10 +271,9 @@ def update_product(product_id):
     return jsonify({'message': 'Product updated successfully'}), 200
 
 @app.route('/api/vendor/products/<int:product_id>', methods=['DELETE'])
+@vendor_required
 def delete_product(product_id):
-    vendor_id = session.get('vendor_id')
-    if not vendor_id:
-        return jsonify({'error': 'Unauthorized'}), 401
+    vendor_id = session['vendor_id']
     
     conn = get_db()
     result = conn.execute(
@@ -252,11 +290,9 @@ def delete_product(product_id):
         return jsonify({'error': 'Product not found or unauthorized'}), 404
 
 @app.route('/api/vendor/products/<int:product_id>/stock', methods=['PUT'])
+@vendor_required
 def update_stock(product_id):
-    vendor_id = session.get('vendor_id')
-    if not vendor_id:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
+    vendor_id = session['vendor_id']
     data = request.json
     new_stock = data.get('stock')
     
@@ -274,13 +310,11 @@ def update_stock(product_id):
         conn.close()
         return jsonify({'error': 'Product not found or unauthorized'}), 404
 
-# Order Routes
+# Order Routes (Auth required for users)
 @app.route('/api/orders', methods=['POST'])
+@login_required
 def create_order():
-    user_id = session.get('user_id')
-    if not user_id:
-        return jsonify({'error': 'Unauthorized'}), 401
-    
+    user_id = session['user_id']
     data = request.json
     cart_items = data.get('items', [])
     
@@ -323,10 +357,9 @@ def create_order():
     return jsonify({'message': 'Order created successfully', 'order_id': order_id}), 201
 
 @app.route('/api/orders', methods=['GET'])
+@login_required
 def get_orders():
-    user_id = session.get('user_id')
-    if not user_id:
-        return jsonify({'error': 'Unauthorized'}), 401
+    user_id = session['user_id']
     
     conn = get_db()
     orders = conn.execute(
@@ -343,7 +376,7 @@ def get_orders():
     
     return jsonify([dict(o) for o in orders]), 200
 
-# Cart persistence (optional - using sessions)
+# Cart persistence (sessions)
 @app.route('/api/cart', methods=['POST'])
 def save_cart():
     data = request.json
