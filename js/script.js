@@ -9,17 +9,17 @@ const store = {
 };
 
 const utils = {
-    formatPrice: function(price) {
-        return `$${price.toFixed(2)}`;
-    },
-    formatRating: function(rating) {
+    formatPrice: (price) => `$${price.toFixed(2)}`,
+    
+    formatRating: (rating) => {
         const fullStars = Math.floor(rating);
         const hasHalfStar = rating % 1 !== 0;
         let stars = '⭐'.repeat(fullStars);
         if (hasHalfStar) stars += '⭐';
         return `${stars} (${rating})`;
     },
-    saveCart: async function() {
+    
+    saveCart: async () => {
         try {
             await fetch(`${API_BASE_URL}/cart`, {
                 method: 'POST',
@@ -31,7 +31,8 @@ const utils = {
             console.error('Error saving cart:', err);
         }
     },
-    loadCart: async function() {
+    
+    loadCart: async () => {
         try {
             const response = await fetch(`${API_BASE_URL}/cart`, {
                 credentials: 'include'
@@ -46,7 +47,7 @@ const utils = {
 };
 
 const productManager = {
-    fetchProducts: async function() {
+    fetchProducts: async () => {
         try {
             const params = new URLSearchParams({
                 category: store.currentCategory,
@@ -57,23 +58,22 @@ const productManager = {
             const response = await fetch(`${API_BASE_URL}/products?${params}`);
             const data = await response.json();
             store.products = data;
-            this.renderProducts();
+            productManager.renderProducts();
         } catch (err) {
             console.error('Error fetching products:', err);
-            this.renderProducts();
+            productManager.renderProducts();
         }
     },
     
-    renderProducts: function() {
-        var self = this;
-        const grid = document.getElementById('productsGrid');
+    renderProducts: () => {
+        const $grid = $('#productsGrid');
         
         if (store.products.length === 0) {
-            grid.innerHTML = '<div class="no-products">No products found</div>';
+            $grid.html('<div class="no-products">No products found</div>');
             return;
         }
         
-        grid.innerHTML = store.products.map(function(product) {
+        const productsHtml = store.products.map(product => {
             const imageHtml = product.image_url 
                 ? `<img src="${product.image_url}" alt="${product.title}" style="width:100%;height:250px;object-fit:cover;">` 
                 : '<div class="product-image">Placeholder</div>';
@@ -92,40 +92,34 @@ const productManager = {
             `;
         }).join('');
         
-        this.attachProductEventListeners();
+        $grid.html(productsHtml);
+        productManager.attachProductEventListeners();
     },
     
-    attachProductEventListeners: function() {
-        var self = this;
-        
-        document.querySelectorAll('.product-card').forEach(function(card) {
-            card.addEventListener('click', function(e) {
-                if (!e.target.classList.contains('add-to-cart-btn')) {
-                    const id = parseInt(card.dataset.id);
-                    self.showProductDetail(id);
-                }
-            });
+    attachProductEventListeners: () => {
+        $('.product-card').on('click', function(e) {
+            if (!$(e.target).hasClass('add-to-cart-btn')) {
+                const id = parseInt($(this).data('id'));
+                productManager.showProductDetail(id);
+            }
         });
         
-        document.querySelectorAll('.add-to-cart-btn').forEach(function(btn) {
-            btn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                const id = parseInt(btn.dataset.id);
-                cartManager.addToCart(id);
-            });
+        $('.add-to-cart-btn').on('click', function(e) {
+            e.stopPropagation();
+            const id = parseInt($(this).data('id'));
+            cartManager.addToCart(id);
         });
     },
     
-    showProductDetail: function(id) {
-        const product = store.products.find(function(p) { return p.id === id; });
+    showProductDetail: (id) => {
+        const product = store.products.find(p => p.id === id);
         if (!product) return;
         
         const imageHtml = product.image_url 
             ? `<img src="${product.image_url}" alt="${product.title}" style="width:100%;height:400px;object-fit:cover;border-radius:8px;">` 
             : '<div class="product-detail-image">Placeholder</div>';
         
-        const detailContainer = document.getElementById('productDetail');
-        detailContainer.innerHTML = `
+        const detailHtml = `
             ${imageHtml}
             <div class="product-detail-info">
                 <div class="product-detail-category">${product.category}</div>
@@ -139,7 +133,9 @@ const productManager = {
             </div>
         `;
         
-        detailContainer.querySelector('.add-to-cart-btn').addEventListener('click', function() {
+        $('#productDetail').html(detailHtml);
+        
+        $('#productDetail .add-to-cart-btn').on('click', function() {
             cartManager.addToCart(id);
         });
         
@@ -148,82 +144,78 @@ const productManager = {
 };
 
 const cartManager = {
-    addToCart: function(productId) {
-        const product = store.products.find(function(p) { return p.id === productId; });
+    addToCart: (productId) => {
+        const product = store.products.find(p => p.id === productId);
         if (!product) return;
         
         if (product.stock_quantity <= 0) {
-            this.showNotification('Product is out of stock!', 'error');
+            cartManager.showNotification('Product is out of stock!', 'error');
             return;
         }
         
-        const existingItem = store.cart.find(function(item) { return item.id === productId; });
+        const existingItem = store.cart.find(item => item.id === productId);
         
         if (existingItem) {
             if (existingItem.quantity >= product.stock_quantity) {
-                this.showNotification('Cannot add more than available stock!', 'error');
+                cartManager.showNotification('Cannot add more than available stock!', 'error');
                 return;
             }
             existingItem.quantity++;
         } else {
-            const newItem = Object.assign({}, product);
-            newItem.quantity = 1;
+            const newItem = { ...product, quantity: 1 };
             store.cart.push(newItem);
         }
         
-        this.updateCartCount();
+        cartManager.updateCartCount();
         utils.saveCart();
-        this.showNotification('Added to cart!');
+        cartManager.showNotification('Added to cart!');
     },
     
-    removeFromCart: function(productId) {
-        store.cart = store.cart.filter(function(item) { return item.id !== productId; });
-        this.updateCartCount();
-        this.renderCart();
+    removeFromCart: (productId) => {
+        store.cart = store.cart.filter(item => item.id !== productId);
+        cartManager.updateCartCount();
+        cartManager.renderCart();
         utils.saveCart();
     },
     
-    updateQuantity: function(productId, change) {
-        const item = store.cart.find(function(item) { return item.id === productId; });
+    updateQuantity: (productId, change) => {
+        const item = store.cart.find(item => item.id === productId);
         if (!item) return;
         
-        const product = store.products.find(function(p) { return p.id === productId; });
+        const product = store.products.find(p => p.id === productId);
         
         if (change > 0 && product && item.quantity >= product.stock_quantity) {
-            this.showNotification('Cannot exceed available stock!', 'error');
+            cartManager.showNotification('Cannot exceed available stock!', 'error');
             return;
         }
         
         item.quantity += change;
         
         if (item.quantity <= 0) {
-            this.removeFromCart(productId);
+            cartManager.removeFromCart(productId);
         } else {
-            this.updateCartCount();
-            this.renderCart();
+            cartManager.updateCartCount();
+            cartManager.renderCart();
             utils.saveCart();
         }
     },
     
-    updateCartCount: function() {
-        const count = store.cart.reduce(function(sum, item) {
-            return sum + item.quantity;
-        }, 0);
-        document.getElementById('cartCount').textContent = count;
+    updateCartCount: () => {
+        const count = store.cart.reduce((sum, item) => sum + item.quantity, 0);
+        $('#cartCount').text(count);
     },
     
-    renderCart: function() {
-        var self = this;
-        const cartItemsContainer = document.getElementById('cartItems');
-        const cartSummaryContainer = document.getElementById('cartSummary');
+    renderCart: () => {
+        const $cartItems = $('#cartItems');
+        const $cartSummary = $('#cartSummary');
         
         if (store.cart.length === 0) {
-            cartItemsContainer.innerHTML = '<div class="empty-cart">Your cart is empty</div>';
-            cartSummaryContainer.innerHTML = '';
+            $cartItems.html('<div class="empty-cart">Your cart is empty</div>');
+            $cartSummary.html('');
             return;
         }
         
-        cartItemsContainer.innerHTML = store.cart.map(function(item) {
+        const itemsHtml = store.cart.map(item => {
             const imageHtml = item.image_url 
                 ? `<img src="${item.image_url}" alt="${item.title}" style="width:80px;height:80px;object-fit:cover;border-radius:4px;">` 
                 : '<div class="cart-item-image">Item</div>';
@@ -245,11 +237,11 @@ const cartManager = {
             `;
         }).join('');
         
-        const total = store.cart.reduce(function(sum, item) {
-            return sum + (item.price * item.quantity);
-        }, 0);
+        $cartItems.html(itemsHtml);
         
-        cartSummaryContainer.innerHTML = `
+        const total = store.cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        
+        const summaryHtml = `
             <div class="cart-total">
                 <span>Total:</span>
                 <span>${utils.formatPrice(total)}</span>
@@ -257,38 +249,29 @@ const cartManager = {
             <button class="checkout-btn" id="checkoutBtn">Proceed to Checkout</button>
         `;
         
-        this.attachCartEventListeners();
+        $cartSummary.html(summaryHtml);
+        cartManager.attachCartEventListeners();
     },
     
-    attachCartEventListeners: function() {
-        var self = this;
-        
-        document.querySelectorAll('.quantity-btn').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                const id = parseInt(btn.dataset.id);
-                const action = btn.dataset.action;
-                const change = action === 'increase' ? 1 : -1;
-                self.updateQuantity(id, change);
-            });
+    attachCartEventListeners: () => {
+        $('.quantity-btn').off('click').on('click', function() {
+            const id = parseInt($(this).data('id'));
+            const action = $(this).data('action');
+            const change = action === 'increase' ? 1 : -1;
+            cartManager.updateQuantity(id, change);
         });
         
-        document.querySelectorAll('.remove-btn').forEach(function(btn) {
-            btn.addEventListener('click', function() {
-                const id = parseInt(btn.dataset.id);
-                self.removeFromCart(id);
-            });
+        $('.remove-btn').off('click').on('click', function() {
+            const id = parseInt($(this).data('id'));
+            cartManager.removeFromCart(id);
         });
         
-        const checkoutBtn = document.getElementById('checkoutBtn');
-        if (checkoutBtn) {
-            checkoutBtn.addEventListener('click', function() {
-                self.checkout();
-            });
-        }
+        $('#checkoutBtn').off('click').on('click', () => {
+            cartManager.checkout();
+        });
     },
     
-    checkout: async function() {
-        // Check if user is logged in
+    checkout: async () => {
         try {
             const authResponse = await fetch(`${API_BASE_URL}/auth/status`, {
                 credentials: 'include'
@@ -296,14 +279,12 @@ const cartManager = {
             const authData = await authResponse.json();
             
             if (!authData.authenticated || authData.type !== 'user') {
-                // Not logged in, redirect to login
                 if (confirm('You need to login to place an order. Would you like to login now?')) {
                     window.location.href = 'login.html';
                 }
                 return;
             }
             
-            // User is logged in, proceed with checkout
             const response = await fetch(`${API_BASE_URL}/orders`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -316,115 +297,110 @@ const cartManager = {
             });
             
             if (response.ok) {
-                const data = await response.json();
-                this.showNotification('Order placed successfully!');
+                cartManager.showNotification('Order placed successfully!');
                 store.cart = [];
-                this.updateCartCount();
-                this.renderCart();
+                cartManager.updateCartCount();
+                cartManager.renderCart();
                 utils.saveCart();
                 
-                setTimeout(function() {
+                setTimeout(() => {
                     modalManager.closeModal('cartModal');
                 }, 2000);
             } else {
                 const error = await response.json();
-                this.showNotification(error.error || 'Checkout failed', 'error');
+                cartManager.showNotification(error.error || 'Checkout failed', 'error');
             }
         } catch (err) {
             console.error('Checkout error:', err);
-            this.showNotification('Checkout failed. Please try again.', 'error');
+            cartManager.showNotification('Checkout failed. Please try again.', 'error');
         }
     },
     
-    showNotification: function(message, type) {
-        const existingNotif = document.querySelector('.notification');
-        if (existingNotif) existingNotif.remove();
+    showNotification: (message, type) => {
+        $('.notification').remove();
         
         const bgColor = type === 'error' ? '#f44336' : '#329d9c';
         
-        const notif = document.createElement('div');
-        notif.className = 'notification';
-        notif.textContent = message;
-        notif.style.cssText = `position:fixed;top:80px;right:20px;background:${bgColor};color:white;padding:1rem 2rem;border-radius:4px;z-index:3000;box-shadow:0 4px 8px rgba(0,0,0,0.2);`;
-        document.body.appendChild(notif);
-        
-        setTimeout(function() {
-            notif.remove();
-        }, 3000);
+        $('<div class="notification"></div>')
+            .text(message)
+            .css({
+                position: 'fixed',
+                top: '80px',
+                right: '20px',
+                background: bgColor,
+                color: 'white',
+                padding: '1rem 2rem',
+                borderRadius: '4px',
+                zIndex: 3000,
+                boxShadow: '0 4px 8px rgba(0,0,0,0.2)'
+            })
+            .appendTo('body')
+            .delay(3000)
+            .fadeOut(500, function() {
+                $(this).remove();
+            });
     }
 };
 
 const modalManager = {
-    openModal: function(modalId) {
-        document.getElementById(modalId).classList.add('active');
-        document.body.style.overflow = 'hidden';
+    openModal: (modalId) => {
+        $(`#${modalId}`).addClass('active');
+        $('body').css('overflow', 'hidden');
     },
     
-    closeModal: function(modalId) {
-        document.getElementById(modalId).classList.remove('active');
-        document.body.style.overflow = 'auto';
+    closeModal: (modalId) => {
+        $(`#${modalId}`).removeClass('active');
+        $('body').css('overflow', 'auto');
     },
     
-    init: function() {
-        var self = this;
-        
-        document.getElementById('closeProductModal').addEventListener('click', function() {
-            self.closeModal('productModal');
+    init: () => {
+        $('#closeProductModal').on('click', () => {
+            modalManager.closeModal('productModal');
         });
         
-        document.getElementById('closeCartModal').addEventListener('click', function() {
-            self.closeModal('cartModal');
+        $('#closeCartModal').on('click', () => {
+            modalManager.closeModal('cartModal');
         });
         
-        document.querySelectorAll('.modal').forEach(function(modal) {
-            modal.addEventListener('click', function(e) {
-                if (e.target === modal) {
-                    self.closeModal(modal.id);
-                }
-            });
+        $('.modal').on('click', function(e) {
+            if ($(e.target).is('.modal')) {
+                modalManager.closeModal($(this).attr('id'));
+            }
         });
     }
 };
 
 function initEventListeners() {
-    const searchInput = document.getElementById('searchInput');
-    const searchBtn = document.getElementById('searchBtn');
-    
-    searchBtn.addEventListener('click', function() {
-        store.searchQuery = searchInput.value;
+    $('#searchBtn').on('click', () => {
+        store.searchQuery = $('#searchInput').val();
         productManager.fetchProducts();
     });
     
-    searchInput.addEventListener('keypress', function(e) {
+    $('#searchInput').on('keypress', (e) => {
         if (e.key === 'Enter') {
-            store.searchQuery = searchInput.value;
+            store.searchQuery = $('#searchInput').val();
             productManager.fetchProducts();
         }
     });
     
-    document.querySelectorAll('.category-btn').forEach(function(btn) {
-        btn.addEventListener('click', function() {
-            document.querySelectorAll('.category-btn').forEach(function(b) {
-                b.classList.remove('active');
-            });
-            btn.classList.add('active');
-            store.currentCategory = btn.dataset.category;
-            productManager.fetchProducts();
-        });
-    });
-    
-    document.getElementById('sortSelect').addEventListener('change', function(e) {
-        store.sortBy = e.target.value;
+    $('.category-btn').on('click', function() {
+        $('.category-btn').removeClass('active');
+        $(this).addClass('active');
+        store.currentCategory = $(this).data('category');
         productManager.fetchProducts();
     });
     
-    document.getElementById('cartBtn').addEventListener('click', function() {
+    $('#sortSelect').on('change', function() {
+        store.sortBy = $(this).val();
+        productManager.fetchProducts();
+    });
+    
+    $('#cartBtn').on('click', () => {
         cartManager.renderCart();
         modalManager.openModal('cartModal');
     });
 }
 
-// Check authentication status
 async function checkAuth() {
     try {
         const response = await fetch(`${API_BASE_URL}/auth/status`, {
@@ -433,28 +409,27 @@ async function checkAuth() {
         const data = await response.json();
         
         if (data.authenticated && data.type === 'user') {
-            // User is logged in
             updateUIForLoggedInUser(data.user);
         } else if (data.authenticated && data.type === 'vendor') {
-            // Vendor logged in, redirect to vendor page
             window.location.href = 'vendor.html';
             return;
         }
-        // Guest users can continue
     } catch (err) {
         console.error('Auth check error:', err);
     }
 }
 
 function updateUIForLoggedInUser(user) {
-    // Add user info to header
-    const cartBtn = document.getElementById('cartBtn');
-    const userInfo = document.createElement('div');
-    userInfo.style.cssText = 'color:white;margin-right:1rem;font-size:0.9rem;';
-    userInfo.innerHTML = `Welcome, ${user.name}! | <a href="#" id="logoutLink" style="color:#d4c5a0;text-decoration:none;">Logout</a>`;
-    cartBtn.parentNode.insertBefore(userInfo, cartBtn);
+    const userInfoHtml = `
+        <div style="color:white;margin-right:1rem;font-size:0.9rem;">
+            Welcome, ${user.name}! | 
+            <a href="#" id="logoutLink" style="color:#d4c5a0;text-decoration:none;">Logout</a>
+        </div>
+    `;
     
-    document.getElementById('logoutLink').addEventListener('click', async (e) => {
+    $(userInfoHtml).insertBefore('#cartBtn');
+    
+    $('#logoutLink').on('click', async (e) => {
         e.preventDefault();
         await logout();
     });
@@ -481,4 +456,4 @@ async function init() {
     initEventListeners();
 }
 
-init();
+$(document).ready(init);

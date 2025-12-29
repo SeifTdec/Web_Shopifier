@@ -58,11 +58,10 @@ const authManager = {
                 utils.updateVendorInfo();
                 return true;
             } else if (data.authenticated && data.type === 'user') {
-                // User logged in, redirect to customer store
                 window.location.href = 'index.html';
                 return false;
             } else {
-                // Not authenticated, redirect to login
+
                 window.location.href = 'login.html';
                 return false;
             }
@@ -159,7 +158,6 @@ const productManager = {
                         <th>Product</th>
                         <th>Category</th>
                         <th>Price</th>
-                        <th>Rating</th>
                         <th>Stock</th>
                         <th>Actions</th>
                     </tr>
@@ -173,7 +171,6 @@ const productManager = {
                                 <td class="product-title-cell">${p.title}</td>
                                 <td><span class="category-badge">${p.category}</span></td>
                                 <td>${utils.formatPrice(p.price)}</td>
-                                <td>⭐ ${p.rating}</td>
                                 <td><span class="stock-badge ${stockStatus.class}">${stockStatus.text}</span></td>
                                 <td>
                                     <div class="action-buttons">
@@ -215,7 +212,6 @@ const productManager = {
         $('#editProductTitle').val(product.title);
         $('#editProductCategory').val(product.category);
         $('#editProductPrice').val(product.price);
-        $('#editProductRating').val(product.rating);
         $('#editProductDescription').val(product.description);
         
         $('#editModal').addClass('active');
@@ -239,7 +235,6 @@ const productManager = {
                     title: formData.title,
                     category: formData.category,
                     price: parseFloat(formData.price),
-                    rating: parseFloat(formData.rating),
                     description: formData.description
                 })
             });
@@ -446,7 +441,6 @@ function initEventListeners() {
             title: $('#editProductTitle').val(),
             category: $('#editProductCategory').val(),
             price: $('#editProductPrice').val(),
-            rating: $('#editProductRating').val(),
             description: $('#editProductDescription').val()
         };
         
