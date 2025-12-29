@@ -121,6 +121,30 @@ def login_user():
         return jsonify({'error': 'Invalid credentials'}), 401
 
 # Vendor Authentication Routes
+@app.route('/api/vendor/register', methods=['POST'])
+def register_vendor():
+    data = request.json
+    business_name = data.get('businessName')
+    email = data.get('email')
+    password = data.get('password')
+    phone = data.get('phone', '')
+    address = data.get('address', '')
+    
+    if not all([business_name, email, password]):
+        return jsonify({'error': 'Business name, email, and password are required'}), 400
+    
+    try:
+        conn = get_db()
+        conn.execute(
+            'INSERT INTO vendors (business_name, email, password, phone, address) VALUES (?, ?, ?, ?, ?)',
+            (business_name, email, password, phone, address)
+        )
+        conn.commit()
+        conn.close()
+        return jsonify({'message': 'Vendor registered successfully'}), 201
+    except sqlite3.IntegrityError:
+        return jsonify({'error': 'Email already exists'}), 400
+
 @app.route('/api/vendor/login', methods=['POST'])
 def login_vendor():
     data = request.json
