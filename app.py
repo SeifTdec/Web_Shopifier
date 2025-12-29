@@ -69,7 +69,7 @@ def check_auth_status():
     else:
         return jsonify({'authenticated': False}), 200
 
-# User Authentication Routes
+
 @app.route('/api/auth/register', methods=['POST'])
 def register_user():
     data = request.json
@@ -120,7 +120,7 @@ def login_user():
     else:
         return jsonify({'error': 'Invalid credentials'}), 401
 
-# Vendor Authentication Routes
+
 @app.route('/api/vendor/register', methods=['POST'])
 def register_vendor():
     data = request.json
@@ -178,7 +178,7 @@ def logout():
     session.clear()
     return jsonify({'message': 'Logged out successfully'}), 200
 
-# Product Routes (Public - no auth required)
+
 @app.route('/api/products', methods=['GET'])
 def get_products():
     category = request.args.get('category', 'all')
@@ -224,7 +224,7 @@ def get_product(product_id):
     else:
         return jsonify({'error': 'Product not found'}), 404
 
-# Vendor Product Management Routes (Auth required)
+
 @app.route('/api/vendor/products', methods=['GET'])
 @vendor_required
 def get_vendor_products():
@@ -271,8 +271,7 @@ def update_product(product_id):
     data = request.json
     
     conn = get_db()
-    
-    # Verify product belongs to vendor
+
     product = conn.execute(
         'SELECT * FROM products WHERE id = ? AND vendor_id = ?',
         (product_id, vendor_id)
@@ -284,10 +283,9 @@ def update_product(product_id):
     
     conn.execute(
         '''UPDATE products 
-        SET title = ?, category = ?, price = ?, rating = ?, description = ?, updated_at = CURRENT_TIMESTAMP
+        SET title = ?, category = ?, price = ?, description = ?, updated_at = CURRENT_TIMESTAMP
         WHERE id = ? AND vendor_id = ?''',
-        (data['title'], data['category'], data['price'], data['rating'],
-         data['description'], product_id, vendor_id)
+        (data['title'], data['category'], data['price'], data['description'], product_id, vendor_id)
     )
     conn.commit()
     conn.close()
